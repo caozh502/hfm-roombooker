@@ -1,41 +1,21 @@
-
-# import requests
-
-# url = 'https://hfm-karlsruhe.asimut.net/public/login.php'
-# header = { 'User-agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.85 Safari/537.36'
-# }
-
-# from_data = {'authenticate-useraccount': '13200',
-#     'authenticate-password': 'ZXY200238zxy.',
-#     'authenticate-url': '/public/',
-#     'authenticate-verification': 'ok',
-#     # 'execution': 'e1s1',
-#     # '_eventId': 'submit',
-#     # 'submit': '登录'
-# }
-# s = requests.session()
-# response = s.post(url, data = from_data, headers = header)
-
-# if 'Xinyuan Zhang' in response.content.decode('utf-8'):
-#     print ('successfully login')
-# else:
-#     print ('failed login')
-
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.options import Options
 import time
+import datetime
 
 class booker:
     def __init__(self,data):
         self.url = data[0]
         self.acc = data[1]
         self.psw = data[2]
-        self.stTime = data[3]
-        self.dur = data[4]
-        self.opt = data[5]
-
+        self.opt = data[3]
+        self.stTime = data[4]
+        self.edtime = data[5]
+        self.roomNum = data[6]
+        self.resRoomNum = 0
         localtime = time.localtime(time.time())
         self.mday = localtime.tm_mday+7   
 
@@ -79,7 +59,7 @@ class booker:
         actions = ActionChains(self.driver)
         actions.move_to_element(btn_OG)
         actions.click(btn_OG).perform()  
-        for i in range (80,94):
+        for i in range (80,95):
             if (i not in invalid_room):
                 OG_room = self.driver.find_element(By.ID,"chart-row-"+str(i)).find_element(By.CLASS_NAME,"event-location")
                 # print (OG_room.text)
@@ -96,22 +76,59 @@ class booker:
                     for i in range (1,3):
                         self.driver.back()
 
+def time_cmp(first_time, second_time):
+    return (int(first_time.strftime("%H%M")) - int(second_time.strftime("%H%M")))
 
 if __name__ == '__main__':
     # ignore some errors
-    options = webdriver.ChromeOptions()
+    options = Options()
     options.add_argument('--ignore-certificate-errors')
     options.add_argument('--ignore-ssl-errors')
 
+    localtime = datetime.datetime.now()
+    
+    ## valid after all works done
+    # options.add_argument('--headless')
+    # options.add_argument("--start-maximized")
+    # options.add_argument("--window-size=1920,1080")
+
     # print("Enter your wish start time(example: 18:15): ")
-    # st = input()
+    # st = input() # start time
     # print("Enter your duration(h):")    
-    # dur = input()
-    st =0
-    dur =0
-    data = ['https://hfm-karlsruhe.asimut.net/public/login.php',  '13200',  'ZXY200238zxy.',st,dur,options]
+    # et = input() # end time
+    # print ("Enter your room number (if need):")
+    # tmp = input()
+    # num_room= tmp if tmp else 0 # input room number if need
+    st ="18:15"
+    st = datetime.datetime.strptime(st, "%H:%M")
+    st_before = st-datetime.timedelta(minutes=30)
+    et ="19:15"
+    num_room= "210"
+    data = ['https://hfm-karlsruhe.asimut.net/public/login.php',  '13200',  'ZXY200238zxy.',options, st,et,num_room]
     roombooker = booker(data)
     roombooker.login()
-    roombooker.find_Termin_OG()
+
+    # current time > end time
+    if time_cmp(localtime,datetime.datetime.strptime(et, "%H:%M"))>0: 
+        result = roombooker.find_Termin_EG() and roombooker.find_Termin_OG()
+        if result:
+            print ("room found in " + str(roombooker.resRoomNum) + " from " + str(roombooker.stTime) + " to "+ str(roombooker.edTime))
+        else:
+            print ("Cannot find empty room at moment")
+    else:
+        #  (start time +30) < current time < end time
+        if time_cmp(localtime,datetime.datetime.strptime(et, "%H:%M"))<0 and time_cmp(localtime,st_before)>0:
+            print (2)
+            # result = roombooker.find_Termin_EG() and roombooker.find_Termin_OG()
+            # if result:
+            #     print ("room found in " + str(roombooker.resRoomNum) + " from " + str(roombooker.stTime) + " to "+ str(roombooker.edTime))
+            # else:
+            #     print ("Cannot find empty room at moment")
+        else:
+            #  current time < (start time +30)
+            if time_cmp(localtime,st_before)<0:
+                print ("waiting now until reservation is possible")
+                time.sleep(15)
+                
     # 退出浏览器
-    # roombooker.driver.quit()
+    roombooker.driver.quit()
