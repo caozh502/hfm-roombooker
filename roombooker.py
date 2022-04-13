@@ -8,7 +8,7 @@ import time
 import datetime
 
 def time_cmp(first_time, second_time):
-    return (int(first_time.strftime("%H%M")) - int(second_time.strftime("%H%M")))
+    return (int(first_time.strftime("%H%M%S")) - int(second_time.strftime("%H%M%S")))
 
 def getNearestMinBack(t):
     time = datetime.datetime.strptime(t, "%H:%M")
@@ -45,7 +45,7 @@ class booker(object):
         
 
     def login(self):   
-
+        print ("[Login]")
         # set chromedriver
         self.driver=webdriver.Chrome(options=self.opt)
         self.driver.maximize_window()  #设置窗口最大化
@@ -65,7 +65,7 @@ class booker(object):
             print ('failed login')
         
     def find_Termin_EG(self):
-        # time.sleep(0.5)
+        print ("[find Termin in EG]")
         delta_date = (self.today+7) - self.date   
         counter_room = 0
         # invalid_room = [65,67,73,75]
@@ -160,6 +160,7 @@ class booker(object):
                 return True
 
     def find_Termin_OG(self):
+        print ("[find Termin in OG]")
         delta_date = (self.today+7) - self.date 
         counter_room = 0
         # invalid_room = [82,85,90,93,94]
@@ -257,6 +258,7 @@ class booker(object):
                 return True
     
     def extension_time(self):
+        print ("[Extension time]")
         btn_zeitplan = self.driver.find_element(By.XPATH,'//*[@id="my-activities"]')
         btn_zeitplan.click()
 
@@ -264,14 +266,17 @@ class booker(object):
         now_form = datetime.datetime.strptime(now.strftime("%H:%M"),"%H:%M") # only hour:minute
         delta =self.date-self.today # differenz between desired day and today
 
-        # to the page of booked room
+        # go to the page of booked room
+        print ("go to the page of booked room")
         btn_booked = self.driver.find_element(By.XPATH,'//div[@id="function-span"]/h1['+str(2+delta)+']/following-sibling::node()\
 [position()<count(//div[@id="function-span"]/h1['+str(2+delta)+']/following-sibling::node())\
 -count(//div[@id="function-span"]/h1['+str(2+delta+1)+']/following-sibling::node())]\
 //p[contains(text(),\''+self.stTime.strftime("%H:%M")+'\')]/../..//span[@class="event-link"]') if self.date !=0 else \
                         self.driver.find_element(By.XPATH,'//div[@id="function-span"]/h1[9]/following-sibling::node()')
         btn_booked.click()
+
         # get value of end time in textBox
+        print ("get value of end time in textBox")
         endTime =self.driver.find_element(By.XPATH,'//*[@id="event-endtime"]')
         ed_ori = datetime.datetime.strptime(endTime.get_attribute("value"),"%H:%M")
         ed_value = ed_ori
@@ -285,14 +290,16 @@ class booker(object):
 
                 # if now>>value of endtime TextBox (over 15min) then book once, else waiting
                 if  diffMin(now_form,ed_value)>=15:
+                    print ("now>>value of endtime TextBox (over 15min) then book once")
                     ed_tmp = getNearestMinBack(now.strftime("%H:%M"))
                 while (time_cmp(now,ed_tmp)<0):
                 # for m in range(1,2):
-                    print ("[" + now.strftime("%H:%M:%S")+"] waiting now until next reservation is possible, "+ str(round)+" round left")
+                    print ("[" + now.strftime("%H:%M:%S")+"] Waiting until the next time slot opens, "+ str(round)+" round left")
                     time.sleep(15)
                     now = datetime.datetime.now()
 
                 # fill endTime textBox    
+                print ("fill endTime textBox")
                 endTime =self.driver.find_element(By.XPATH,'//*[@id="event-endtime"]')    
                 endTime.clear()
                 self.driver.execute_script("arguments[0].value = '"+ed_tmp.strftime("%H:%M")+"'", endTime)
@@ -306,11 +313,13 @@ class booker(object):
                     print ("Successfully extended the room time to "+ed_tmp.strftime("%H:%M"))
 
                     # refresh the time and end time (temporary)
+                    print ("refresh the time and end time (temporary)")
                     now = datetime.datetime.now()
                     now_form = datetime.datetime.strptime(now.strftime("%H:%M"),"%H:%M") # only hour:minute
                     ed_tmp = getNearestMinFor(now.strftime("%H:%M"))
                     
                     # Calculate the number of remaining bookings
+                    print ("Calculate the number of remaining bookings")
                     ed_value = datetime.datetime.strptime(endTime.get_attribute("value"),"%H:%M")
                     diff = diffMin(self.edTime, ed_value)
                     round = int(diff/15)
@@ -350,8 +359,8 @@ if __name__ == '__main__':
     options.add_argument("--start-maximized")
     options.add_argument("--window-size=1920,1080")
     intro = """Please choose mode:
-    [1] normal
-    [2] extend your time"""
+    [1] Normal Mode
+    [2] Extend your time"""
     # print (intro)
     # mode = int(input())
     mode = 2
@@ -368,9 +377,10 @@ if __name__ == '__main__':
         # date= tmp_dt if tmp_dt else 0 # input wish date if need
         st ="17:15"
         st_form = datetime.datetime.strptime(st, "%H:%M")
-        st_aft45 = st_form+datetime.timedelta(minutes=45)
+        st_aft30 = st_form+datetime.timedelta(minutes=30)
         et ="18:30"
         et_form = datetime.datetime.strptime(et, "%H:%M")
+        ed_tmp = getNearestMinBack(localtime.strftime("%H:%M"))
         num_room= 0 # str or 0(default)
         date = 0 # str or 0(default)
         data = ['https://hfm-karlsruhe.asimut.net/public/login.php',  '13200',  'ZXY200238zxy.',options, st,et,num_room,date]
@@ -380,12 +390,14 @@ if __name__ == '__main__':
         if (localtime.day+7)<int(date):
             print ('Your input date is overrange, please try to enter again.')
 
-        #  current time < (start time +45) and date = today+7
-        while time_cmp(localtime,st_aft45)<0 and ((localtime.day+7)==(int(date)) or date==0):
-            print ("[" + localtime.strftime("%H:%M:%S")+"]"+" waiting now until reservation is possible")
+        #  current time < (start time +30) and date = today+7
+        while time_cmp(localtime,st_aft30)<0 and ((localtime.day+7)==(int(date)) or date==0):
+            print ("[" + localtime.strftime("%H:%M:%S")+"]"+" waiting until reservation is possible")
             time.sleep(15)
             localtime = datetime.datetime.now() # refresh
+
         roombooker.login()
+
         # current time > end time
         if time_cmp(localtime,et_form)>0:
             print ("Situtation: current time > end time")
@@ -394,107 +406,44 @@ if __name__ == '__main__':
             else:
                 result = roombooker.find_Termin_EG() if int(num_room) in range(101,116) else roombooker.find_Termin_OG() 
             if result:
-                # print ("room booked in " + roombooker.resRoomNum + " from " + 
-                # str(roombooker.stTime.hour)+':'+str(roombooker.stTime.minute) + " to "+ 
-                # str(roombooker.edTime.hour)+':'+str(roombooker.edTime.minute))
                 print ("room booked in " + roombooker.resRoomNum + " from " + 
                 roombooker.stTime.strftime("%H:%M") + " to "+ roombooker.edTime.strftime("%H:%M"))
             else:
                 print ("Cannot find empty room at moment")
-        #  (start time +45) < current time < end time
+        #  (start time +30) < current time < end time
         else:
-            if time_cmp(localtime,et_form)<0 and time_cmp(localtime,st_aft45)>0:
-                print ("Situtation: (start time +45) < current time < end time")
-                ed_tmp=getNearestMinBack(localtime.strftime("%H:%M"))
-                roombooker.edTime = ed_tmp
-                print (roombooker.edTime.strftime("%H:%M"))
-                if num_room==0:
-                    result = roombooker.find_Termin_EG() or roombooker.find_Termin_OG()
-                else:
-                    result = roombooker.find_Termin_EG() if int(num_room) in range(101,116) else roombooker.find_Termin_OG()
-                if result:
-                    print ("room booked in " + roombooker.resRoomNum + " from " + 
-                    roombooker.stTime.strftime("%H:%M") + " to "+ roombooker.edTime.strftime("%H:%M"))
-                    roombooker.edTime = et_form
-                    roombooker.extension_time()
-                else: # try again
-                    print ("Cannot find empty room at moment, try again...")
-                    time.sleep(15)
-                    result = roombooker.find_Termin_EG() or roombooker.find_Termin_OG()
+            if time_cmp(localtime,et_form)<0 and time_cmp(localtime,st_aft30)>0:
+                print ("Situtation: (start time +30) < current time < end time")
+                while (True):
+                    # Temporary use of the end time (because the real end time has not yet arrived,so cannot be used as a valid parameter for find_Termin)
+                    roombooker.edTime = ed_tmp
+                    print ("Searching avaliable room now...")
+                    if num_room==0:
+                        result = roombooker.find_Termin_EG() or roombooker.find_Termin_OG()
+                    else:
+                        result = roombooker.find_Termin_EG() if int(num_room) in range(101,116) else roombooker.find_Termin_OG()
                     if result:
                         print ("room booked in " + roombooker.resRoomNum + " from " + 
                         roombooker.stTime.strftime("%H:%M") + " to "+ roombooker.edTime.strftime("%H:%M"))
                         roombooker.edTime = et_form
-                        roombooker.extension_time()
+                        result_ex = roombooker.extension_time()
+                        if result_ex: break
                     else:
-                        print ("Cannot find empty room at moment, please try in another time :(")
-        
-            
-        # if (localtime.day+7)==(int(date)) or date==0:
-        #     roombooker.login()
-        #     # current time > end time
-        #     if time_cmp(localtime,et_form)>0: 
-        #         if num_room==0:
-        #             result = roombooker.find_Termin_EG() or roombooker.find_Termin_OG()
-        #         else:
-        #             result = roombooker.find_Termin_EG() if int(num_room) in range(101,116) else roombooker.find_Termin_OG() 
-        #         if result:
-        #             # print ("room booked in " + roombooker.resRoomNum + " from " + 
-        #             # str(roombooker.stTime.hour)+':'+str(roombooker.stTime.minute) + " to "+ 
-        #             # str(roombooker.edTime.hour)+':'+str(roombooker.edTime.minute))
-        #             print ("room booked in " + roombooker.resRoomNum + " from " + 
-        #             roombooker.stTime.strftime("%H:%M") + " to "+ roombooker.edTime.strftime("%H:%M"))
-        #         else:
-        #             print ("Cannot find empty room at moment")
-        #     else:
-        #         #  (start time +45) < current time < end time
-        #         if time_cmp(localtime,et_form)<0 and time_cmp(localtime,st_aft45)>0:
-        #             ed_tmp=getNearestMinBack(localtime.strftime("%H:%M"))
-        #             roombooker.edTime = ed_tmp
-        #             if num_room==0:
-        #                 result = roombooker.find_Termin_EG() or roombooker.find_Termin_OG()
-        #             else:
-        #                 result = roombooker.find_Termin_EG() if int(num_room) in range(101,116) else roombooker.find_Termin_OG()
-        #             if result:
-        #                 print ("room booked in " + roombooker.resRoomNum + " from " + 
-        #                 roombooker.stTime.strftime("%H:%M") + " to "+ roombooker.edTime.strftime("%H:%M"))
-        #                 roombooker.edTime = et_form
-        #                 roombooker.extension_time()
-        #             else: # try again
-        #                 print ("Cannot find empty room at moment, try again...")
-        #                 time.sleep(15)
-        #                 result = roombooker.find_Termin_EG() or roombooker.find_Termin_OG()
-        #                 if result:
-        #                     print ("room booked in " + roombooker.resRoomNum + " from " + 
-        #                     roombooker.stTime.strftime("%H:%M") + " to "+ roombooker.edTime.strftime("%H:%M"))
-        #                     roombooker.edTime = et_form
-        #                     roombooker.extension_time()
-        #                 else:
-        #                     print ("Cannot find empty room at moment, please try in another time :(")
-        #             # result = roombooker.find_Termin_EG() and roombooker.find_Termin_OG()
-        #             # if result:
-        #             #     print ("room found in " + str(roombooker.resRoomNum) + " from " + str(roombooker.stTime) + " to "+ str(roombooker.edTime))
-        #             # else:
-        #             #     print ("Cannot find empty room at moment")
-        #         # else:
-
-        # else:
-        #     if (localtime.day+7)>int(date):
-        #         roombooker.login()
-        #         if num_room==0:
-        #             result = roombooker.find_Termin_EG() or roombooker.find_Termin_OG()
-        #         else:
-        #             result = roombooker.find_Termin_EG() if int(num_room) in range(101,116) else roombooker.find_Termin_OG() 
-        #         if result:
-        #             print ("room booked in " + roombooker.resRoomNum + " from " + 
-        #             roombooker.stTime.strftime("%H:%M") + " to "+ roombooker.edTime.strftime("%H:%M"))
-        #         else:
-        #             print ("Cannot find empty room at moment")
-        #     else:
-        #         if (localtime.day+7)<int(date):
-        #             print ('Your input date is false, please try to enter again.')
+                        print ("Cannot find empty room at moment, try again in 15 min later...")
+                        # all times + 15 min
+                        st_form = st_form + datetime.timedelta(minutes=15)
+                        et_form = (et_form + datetime.timedelta(minutes=15)) if et_form.strftime("%H:%M")!="23:45" else "23:45"
+                        st_aft30 = st_form + datetime.timedelta(minutes=30)
+                        ed_tmp = ed_tmp + datetime.timedelta(minutes=15) if ed_tmp.strftime("%H:%M")!="23:45" else "23:45"
+                        if (time_cmp(et_form,st_form)<1600): # start time=23:30(2330xx), end time=23:45(2345xx)
+                            print ("Cannot find any room today, please try in another day :(")
+                            break
+                        while (time_cmp(localtime,ed_tmp)<0):
+                            print ("[" + localtime.strftime("%H:%M:%S")+"] Waiting for the next 15 minutes")
+                            time.sleep(15)
+                            localtime = datetime.datetime.now()
     elif mode ==2:
-        # input: day(default:+7),start time(default:now), desired end time, switch time between two room(No consideration for now)
+        # input: day(default:+7),start time(default:now), desired end time
         # print ("Enter your wish date (default: today+7):")
         # tmp_dt = input()
         # date= tmp_dt if tmp_dt else 0 # input wish date if need
@@ -503,10 +452,10 @@ if __name__ == '__main__':
         # print("Enter your desired end time:")    
         # et = input() # end time
 
-        date = "17"
-        st ="21:00"
+        date = "15"
+        st ="21:45"
         st_form = datetime.datetime.strptime(st, "%H:%M")
-        # st_before = st_form-datetime.timedelta(minutes=45)
+        # st_before = st_form-datetime.timedelta(minutes=30)
         et ="23:30"
         et_form = datetime.datetime.strptime(et, "%H:%M")
         num_room= 0
