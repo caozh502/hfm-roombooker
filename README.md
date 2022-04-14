@@ -1,6 +1,6 @@
 # HfM-roombooker
 
-this is a program for booking a practice room in HfM (Hochschule für Musik Karlsruhe).
+This is a program for booking a practice room in HfM (Hochschule für Musik Karlsruhe).
 
 ## Implementation
 Automated web operations using **selenium**
