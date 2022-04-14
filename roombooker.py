@@ -109,14 +109,14 @@ class booker(object):
                         counter_room +=1
                         print ('available room 1'+ ((str(0)+str(i-64)) if (i-64)<10 else str(i-64)))
                         self.resRoomNum = '1'+ ((str(0)+str(i-64)) if (i-64)<10 else str(i-64))
-                        # blank_area.click() # may can be deleted
-                        # book_status.click()
+
+                        book_status.click()
                         
-                        for i in range (1,3): # for i in range (1,2): # real env
+                        for i in range (1,2): # for i in range (1,2): # real env
                             self.driver.back()
 
-                        # return True
-            # return False
+                        return True
+            return False
 
             ### test code ###               
             if counter_room == 0:
@@ -155,7 +155,7 @@ class booker(object):
                 # blank_area.click() # may can be deleted
                 # book_status.click()
 
-                for i in range (1,3): # for i in range (1,2): # real env
+                for i in range (1,2): # for i in range (1,2): # real env
                     self.driver.back()
                 return True
 
@@ -210,13 +210,13 @@ class booker(object):
                         print ('available room 2'+ ((str(0)+str(i-79)) if (i-79)<10 else str(i-79)))
                         self.resRoomNum = '2'+ ((str(0)+str(i-79)) if (i-79)<10 else str(i-79))
                         # blank_area.click() # may can be deleted
-                        # book_status.click()
+                        book_status.click()
 
-                        for i in range (1,3): # for i in range (1,2): # real env
+                        for i in range (1,2): # for i in range (1,2): # real env
                             self.driver.back()
                         
-                        # return True
-            # return False
+                        return True
+            return False
             
             ### test code ###
             if counter_room == 0:
@@ -253,14 +253,14 @@ class booker(object):
                 self.resRoomNum = str(self.roomNum)
                 # blank_area.click() # may can be deleted
                 # book_status.click()
-                for i in range (1,3): # for i in range (1,2): # real env
+                for i in range (1,2): # for i in range (1,2): # real env
                     self.driver.back()
                 return True
     
     def extension_time(self):
         print ("[Extension time]")
-        btn_zeitplan = self.driver.find_element(By.XPATH,'//*[@id="my-activities"]')
-        btn_zeitplan.click()
+        # btn_zeitplan = self.driver.find_element(By.XPATH,'//*[@id="my-activities"]')
+        # btn_zeitplan.click()
 
         now = datetime.datetime.now()
         now_form = datetime.datetime.strptime(now.strftime("%H:%M"),"%H:%M") # only hour:minute
@@ -268,81 +268,101 @@ class booker(object):
 
         # go to the page of booked room
         print ("go to the page of booked room")
-        btn_booked = self.driver.find_element(By.XPATH,'//div[@id="function-span"]/h1['+str(2+delta)+']/following-sibling::node()\
-[position()<count(//div[@id="function-span"]/h1['+str(2+delta)+']/following-sibling::node())\
--count(//div[@id="function-span"]/h1['+str(2+delta+1)+']/following-sibling::node())]\
-//p[contains(text(),\''+self.stTime.strftime("%H:%M")+'\')]/../..//span[@class="event-link"]') if self.date !=0 else \
-                        self.driver.find_element(By.XPATH,'//div[@id="function-span"]/h1[9]/following-sibling::node()')
+        btn_date = self.driver.find_element(By.XPATH,'//a[@class="ui-state-default" and text()="'+str(self.date)+'"]')
+        btn_date.click()
+        btn_booked = self.driver.find_element(By.XPATH,'//div[@id="function-span"]/h1[2]/following-sibling::node()\
+[position()<count(//div[@id="function-span"]/h1[2]/following-sibling::node())\
+-count(//div[@id="function-span"]/h1[3]/following-sibling::node())]\
+//p[contains(text(),\''+self.stTime.strftime("%H:%M")+'\')]/../..//span[@class="event-link"]')
         btn_booked.click()
 
-        # get value of end time in textBox
-        print ("get value of end time in textBox")
-        endTime =self.driver.find_element(By.XPATH,'//*[@id="event-endtime"]')
-        ed_ori = datetime.datetime.strptime(endTime.get_attribute("value"),"%H:%M")
-        ed_value = ed_ori
-        ed_tmp = getNearestMinFor(now.strftime("%H:%M"))
-        diff = diffMin( self.edTime, ed_ori)
-        round = int(diff/15)
+        # if date isn't todey+7
+        if self.date!=self.today+7: 
+            print ("fill endTime textBox")
+            endTime =self.driver.find_element(By.XPATH,'//*[@id="event-endtime"]')    
+            endTime.clear()
+            self.driver.execute_script("arguments[0].value = '"+self.edTime.strftime("%H:%M")+"'", endTime)
+            endTime.click()
 
-        # extend time in every 15 min
-        for i in range(1,round+1):
-            if (time_cmp(now,ed_ori)>0):
-
-                # if now>>value of endtime TextBox (over 15min) then book once, else waiting
-                if  diffMin(now_form,ed_value)>=15:
-                    print ("now>>value of endtime TextBox (over 15min) then book once")
-                    ed_tmp = getNearestMinBack(now.strftime("%H:%M"))
-                while (time_cmp(now,ed_tmp)<0):
-                # for m in range(1,2):
-                    print ("[" + now.strftime("%H:%M:%S")+"] Waiting until the next time slot opens, "+ str(round)+" round left")
-                    time.sleep(15)
-                    now = datetime.datetime.now()
-
-                # fill endTime textBox    
-                print ("fill endTime textBox")
-                endTime =self.driver.find_element(By.XPATH,'//*[@id="event-endtime"]')    
-                endTime.clear()
-                self.driver.execute_script("arguments[0].value = '"+ed_tmp.strftime("%H:%M")+"'", endTime)
-                endTime.click()
-
-
-                # check book status
-                time.sleep(0.5)
-                book_status = self.driver.find_element(By.ID,'event-button-save')
-                if book_status.is_enabled() == True:
-                    print ("Successfully extended the room time to "+ed_tmp.strftime("%H:%M"))
-
-                    # refresh the time and end time (temporary)
-                    print ("refresh the time and end time (temporary)")
-                    now = datetime.datetime.now()
-                    now_form = datetime.datetime.strptime(now.strftime("%H:%M"),"%H:%M") # only hour:minute
-                    ed_tmp = getNearestMinFor(now.strftime("%H:%M"))
-                    
-                    # Calculate the number of remaining bookings
-                    print ("Calculate the number of remaining bookings")
-                    ed_value = datetime.datetime.strptime(endTime.get_attribute("value"),"%H:%M")
-                    diff = diffMin(self.edTime, ed_value)
-                    round = int(diff/15)
-
-                    # BOOKING...
-                    book_status.click()
-
-                    # if the booking is completed
-                    if self.edTime.hour==ed_value.hour and self.edTime.minute==ed_value.minute:
-                        print ("[Finished]")
-                        return True
-
-                    # go back to the booking page
-                    time.sleep(1)
-                    self.driver.back()
-                    print ("next time to book: "+ ed_tmp.strftime("%H:%M"))
-                else:
-                    print ("Something wrong when extending room time, try next round")
-                    now = datetime.datetime.now()
-                    now_form = datetime.datetime.strptime(now.strftime("%H:%M"),"%H:%M") # only hour:minute
-                    # return False
+            # check book status
+            time.sleep(0.5)
+            book_status = self.driver.find_element(By.ID,'event-button-save')
+            if book_status.is_enabled() == True:
+                book_status.click()
+                print ("Successfully extended the room time to "+self.edTime.strftime("%H:%M"))
+                return True
             else:
-                continue
+                print ("Something wrong when extending room time, try next round")
+                return False
+        else: # date = today+7
+            # get value of end time in textBox
+            print ("get value of end time in textBox")
+            endTime =self.driver.find_element(By.XPATH,'//*[@id="event-endtime"]')
+            ed_ori = datetime.datetime.strptime(endTime.get_attribute("value"),"%H:%M")
+            ed_value = ed_ori
+            ed_tmp = getNearestMinFor(now.strftime("%H:%M"))
+            diff = diffMin( self.edTime, ed_ori)
+            round = int(diff/15)
+
+            # extend time in every 15 min
+            for i in range(1,round+1):
+                if (time_cmp(now,ed_ori)>0):
+
+                    # if now>>value of endtime TextBox (over 15min) then book once, else waiting
+                    if  diffMin(now_form,ed_value)>=15:
+                        print ("now>>value of endtime TextBox (over 15min) then book once")
+                        ed_tmp = getNearestMinBack(now.strftime("%H:%M"))
+                    while (time_cmp(now,ed_tmp)<0):
+                    # for m in range(1,2):
+                        print ("[" + now.strftime("%H:%M:%S")+"] Waiting until the next time slot opens, "+ str(round)+" round left")
+                        time.sleep(15)
+                        now = datetime.datetime.now()
+
+                    # fill endTime textBox    
+                    print ("fill endTime textBox")
+                    endTime =self.driver.find_element(By.XPATH,'//*[@id="event-endtime"]')    
+                    endTime.clear()
+                    self.driver.execute_script("arguments[0].value = '"+ed_tmp.strftime("%H:%M")+"'", endTime)
+                    endTime.click()
+
+
+                    # check book status
+                    time.sleep(0.5)
+                    book_status = self.driver.find_element(By.ID,'event-button-save')
+                    if book_status.is_enabled() == True:
+                        print ("Successfully extended the room time to "+ed_tmp.strftime("%H:%M"))
+
+                        # refresh the time and end time (temporary)
+                        print ("refresh the time and end time (temporary)")
+                        now = datetime.datetime.now()
+                        now_form = datetime.datetime.strptime(now.strftime("%H:%M"),"%H:%M") # only hour:minute
+                        ed_tmp = getNearestMinFor(now.strftime("%H:%M"))
+                        
+                        # Calculate the number of remaining bookings
+                        print ("Calculate the number of remaining bookings")
+                        ed_value = datetime.datetime.strptime(endTime.get_attribute("value"),"%H:%M")
+                        diff = diffMin(self.edTime, ed_value)
+                        round = int(diff/15)
+
+                        # BOOKING...
+                        book_status.click()
+
+                        # if the booking is completed
+                        if self.edTime.hour==ed_value.hour and self.edTime.minute==ed_value.minute:
+                            print ("[Finished]")
+                            return True
+
+                        # go back to the booking page
+                        time.sleep(1)
+                        self.driver.back()
+                        print ("next time to book: "+ ed_tmp.strftime("%H:%M"))
+                    else:
+                        print ("Something wrong when extending room time, try next round")
+                        now = datetime.datetime.now()
+                        now_form = datetime.datetime.strptime(now.strftime("%H:%M"),"%H:%M") # only hour:minute
+                        # return False
+                else:
+                    continue
 
 if __name__ == '__main__':
     # ignore some errors
@@ -355,9 +375,9 @@ if __name__ == '__main__':
 
     
     ## headless, no window
-    options.add_argument('--headless')
-    options.add_argument("--start-maximized")
-    options.add_argument("--window-size=1920,1080")
+    # options.add_argument('--headless')
+    # options.add_argument("--start-maximized")
+    # options.add_argument("--window-size=1920,1080")
     intro = """Please choose mode:
     [1] Normal Mode
     [2] Extend your time"""
@@ -375,10 +395,10 @@ if __name__ == '__main__':
         # print ("Enter your wish date (if need, default value is today+7):")
         # tmp_dt = input()
         # date= tmp_dt if tmp_dt else 0 # input wish date if need
-        st ="17:15"
+        st ="12:30"
         st_form = datetime.datetime.strptime(st, "%H:%M")
         st_aft30 = st_form+datetime.timedelta(minutes=30)
-        et ="18:30"
+        et ="14:30"
         et_form = datetime.datetime.strptime(et, "%H:%M")
         ed_tmp = getNearestMinBack(localtime.strftime("%H:%M"))
         num_room= 0 # str or 0(default)
@@ -452,11 +472,11 @@ if __name__ == '__main__':
         # print("Enter your desired end time:")    
         # et = input() # end time
 
-        date = "15"
-        st ="21:45"
+        date = 0
+        st ="13:00"
         st_form = datetime.datetime.strptime(st, "%H:%M")
         # st_before = st_form-datetime.timedelta(minutes=30)
-        et ="23:30"
+        et ="14:45"
         et_form = datetime.datetime.strptime(et, "%H:%M")
         num_room= 0
         
