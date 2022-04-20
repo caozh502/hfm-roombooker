@@ -1,3 +1,12 @@
+##### Google Colab #####
+#@title 步骤2：输入参数→点击运行
+mode = 2 #@param ["1", "2"] {type:"raw"}
+start_time = "7:00" #@param {type:"string"}
+end_time = "7:45" #@param {type:"string"}
+room_number = 0 #@param {type:"integer"}
+date = 0 #@param {type:"integer"}
+#################
+
 from xmlrpc.client import DateTime
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -30,17 +39,20 @@ def diffMin(t1,t2):
 class booker(object):
     
     def __init__(self,data):
-        localtime = time.localtime(time.time())
-        self.today = localtime.tm_mday
-        
+        # localtime = time.localtime(time.time())
+        # self.today = localtime.tm_mday
+        localtime = datetime.datetime.now()
+
         self.url = data[0]
         self.acc = data[1]
         self.psw = data[2]
         self.opt = data[3]
-        self.stTime = datetime.datetime.strptime(data[4], "%H:%M")
-        self.edTime = datetime.datetime.strptime(data[5], "%H:%M")
+        self.stTime = data[4]
+        self.stTime_fm = datetime.datetime.strptime(data[4], "%H:%M") # formed start time
+        self.edTime = data[5]
+        self.edTime_fm = datetime.datetime.strptime(data[5], "%H:%M") # formed end time
         self.roomNum = data[6]
-        self.date = int(data[7]) if data[7]!=0 else self.today+7
+        self.date = int(data[7]) if data[7]!=0 else (localtime+datetime.timedelta(days=7)).day
         self.resRoomNum = '0'
         
         
@@ -67,7 +79,7 @@ class booker(object):
         
     def find_Termin_EG(self):
         print ("[find Termin in EG]")
-        delta_date = (self.today+7) - self.date   
+        delta_date = (localtime+datetime.timedelta(days=7)).day - self.date
         counter_room = 0
         # invalid_room = [75]
         invalid_room = [75]
@@ -85,15 +97,16 @@ class booker(object):
                     # btn_book.click()
                 except NoSuchElementException:
                     self.driver.back()
+                    time.sleep(0.1)
                     continue    
                 
                 # Enter preset content
                 startTime =self.driver.find_element(By.XPATH,'//*[@id="event-starttime"]')
                 startTime.clear()
-                startTime.send_keys(self.stTime.strftime("%H:%M"))
+                startTime.send_keys(self.stTime_fm.strftime("%H:%M"))
                 endTime =self.driver.find_element(By.XPATH,'//*[@id="event-endtime"]')
                 endTime.clear()
-                self.driver.execute_script("arguments[0].value = '"+self.edTime.strftime("%H:%M")+"'", endTime)
+                self.driver.execute_script("arguments[0].value = '"+self.edTime+"'", endTime)
                 endTime.click()
                 # roomNumber =self.driver.find_element(By.XPATH,'//*[@id="event-location"]')
                 # roomNumber.clear()
@@ -106,6 +119,8 @@ class booker(object):
                     print ('invalid room 1'+ ((str(0)+str(i-64)) if (i-64)<10 else str(i-64)))
                     for i in range (1,3):
                         self.driver.back()
+                    time.sleep(0.1)
+
                 else:
                     counter_room +=1
                     print ('available room 1'+ ((str(0)+str(i-64)) if (i-64)<10 else str(i-64)))
@@ -115,6 +130,7 @@ class booker(object):
                     
                     for i in range (1,2): # for i in range (1,2): # real env
                         self.driver.back()
+                    time.sleep(0.1)
 
                     return True                   
             return False
@@ -133,15 +149,16 @@ class booker(object):
                 # btn_book.click()
             except NoSuchElementException:
                 self.driver.back()
+                time.sleep(0.1)
                 pass
 
             # Enter preset content
             startTime =self.driver.find_element(By.XPATH,'//*[@id="event-starttime"]')
             startTime.clear()
-            startTime.send_keys(self.stTime.strftime("%H:%M"))
+            startTime.send_keys(self.stTime_fm.strftime("%H:%M"))
             endTime =self.driver.find_element(By.XPATH,'//*[@id="event-endtime"]') 
             endTime.clear()
-            self.driver.execute_script("arguments[0].value = '"+self.edTime.strftime("%H:%M")+"'", endTime)
+            self.driver.execute_script("arguments[0].value = '"+self.edTime+"'", endTime)
             # blank_area = self.driver.find_element(By.XPATH, '//*[@id="left-column"]/h1')
             endTime.click()
         
@@ -153,6 +170,7 @@ class booker(object):
 
                 for i in range (1,3):
                     self.driver.back()
+                time.sleep(0.1)
                 return False
             else:
                 print ('available room '+ str(self.roomNum))
@@ -162,69 +180,73 @@ class booker(object):
 
                 for i in range (1,2): # for i in range (1,2): # real env
                     self.driver.back()
+                time.sleep(0.1)
                 return True
 
     def find_Termin_OG(self):
         print ("[find Termin in OG]")
-        delta_date = (self.today+7) - self.date 
+        delta_date = (localtime+datetime.timedelta(days=7)).day - self.date 
         counter_room = 0
         # invalid_room = [82,85,90,93,94]
-        # invalid_room = [82]
+        invalid_room = [82]
         # time.sleep(0.5)
         ActionChains(self.driver).send_keys(Keys.DOWN).perform()
         # to OG List
-        btn_OG=self.driver.find_element(By.XPATH,'//*[@id="left-column"]/h2[2]/a')
-        actions = ActionChains(self.driver)
-        actions.move_to_element(btn_OG)
-        actions.click(btn_OG).perform()  
+        btn_OG=self.driver.find_element(By.XPATH,'//*[@id="left-column"]/h2[2]/a').click()
+        # actions = ActionChains(self.driver)
+        # actions.move_to_element(btn_OG)
+        # actions.click(btn_OG).perform()  
 
         if self.roomNum == 0: # no input of room number
             # fill the information of booking room
             for i in range (80,95):
-                # if (i not in invalid_room):
-                OG_room = self.driver.find_element(By.ID,"chart-row-"+str(i)).find_element(By.CLASS_NAME,"event-location")
-                # print (OG_room.text)
-                OG_room.click()
-                try:
-                    btn_book = self.driver.find_element(By.XPATH,'//*[@id="function-span"]/p['+str(8-delta_date)+']/a').click()
-                    # btn_book.click()
-                except NoSuchElementException:
-                    self.driver.back()
-                    continue 
-
-                # Enter preset content
-                startTime =self.driver.find_element(By.XPATH,'//*[@id="event-starttime"]')
-                startTime.clear()
-                startTime.send_keys(self.stTime.strftime("%H:%M"))
-                endTime =self.driver.find_element(By.XPATH,'//*[@id="event-endtime"]')
-                # value = endTime.get_attribute("value") 
-                endTime.clear()
-                self.driver.execute_script("arguments[0].value = '"+self.edTime.strftime("%H:%M")+"'", endTime)
-                
-                # blank_area = self.driver.find_element(By.XPATH, '//*[@id="left-column"]/h1')
-                endTime.click()
-                # endTime.send_keys(str(self.edTime.hour)+':'+str(self.edTime.minute))
-
-                # roomNumber =self.driver.find_element(By.XPATH,'//*[@id="event-location"]')
-                # roomNumber.clear()
-                # roomNumber.send_keys("RB 2"+((str(0)+str(i-79)) if (i-79)<10 else str(i-79)))
-                # check book status
-                time.sleep(0.2)
-                book_status = self.driver.find_element(By.ID,'event-button-save')
-                if book_status.is_enabled() == False:
-                    print ('invalid room 2'+ ((str(0)+str(i-79)) if (i-79)<10 else str(i-79)))
-                    for i in range (1,3):
+                if (i not in invalid_room):
+                    OG_room = self.driver.find_element(By.ID,"chart-row-"+str(i)).find_element(By.CLASS_NAME,"event-location")
+                    # print (OG_room.text)
+                    OG_room.click()
+                    try:
+                        btn_book = self.driver.find_element(By.XPATH,'//*[@id="function-span"]/p['+str(8-delta_date)+']/a').click()
+                        # btn_book.click()
+                    except NoSuchElementException:
                         self.driver.back()
-                else:
-                    print ('available room 2'+ ((str(0)+str(i-79)) if (i-79)<10 else str(i-79)))
-                    self.resRoomNum = '2'+ ((str(0)+str(i-79)) if (i-79)<10 else str(i-79))
-                    # blank_area.click() # may can be deleted
-                    book_status.click()
+                        time.sleep(0.1)
+                        continue 
 
-                    for i in range (1,2): # for i in range (1,2): # real env
-                        self.driver.back()
+                    # Enter preset content
+                    startTime =self.driver.find_element(By.XPATH,'//*[@id="event-starttime"]')
+                    startTime.clear()
+                    startTime.send_keys(self.stTime_fm.strftime("%H:%M"))
+                    endTime =self.driver.find_element(By.XPATH,'//*[@id="event-endtime"]')
+                    # value = endTime.get_attribute("value") 
+                    endTime.clear()
+                    self.driver.execute_script("arguments[0].value = '"+self.edTime+"'", endTime)
                     
-                    return True
+                    # blank_area = self.driver.find_element(By.XPATH, '//*[@id="left-column"]/h1')
+                    endTime.click()
+                    # endTime.send_keys(str(self.edTime_fm.hour)+':'+str(self.edTime_fm.minute))
+
+                    # roomNumber =self.driver.find_element(By.XPATH,'//*[@id="event-location"]')
+                    # roomNumber.clear()
+                    # roomNumber.send_keys("RB 2"+((str(0)+str(i-79)) if (i-79)<10 else str(i-79)))
+                    # check book status
+                    time.sleep(0.2)
+                    book_status = self.driver.find_element(By.ID,'event-button-save')
+                    if book_status.is_enabled() == False:
+                        print ('invalid room 2'+ ((str(0)+str(i-79)) if (i-79)<10 else str(i-79)))
+                        for i in range (1,3):
+                            self.driver.back()
+                        time.sleep(0.1)
+                    else:
+                        print ('available room 2'+ ((str(0)+str(i-79)) if (i-79)<10 else str(i-79)))
+                        self.resRoomNum = '2'+ ((str(0)+str(i-79)) if (i-79)<10 else str(i-79))
+                        # blank_area.click() # may can be deleted
+                        book_status.click()
+
+                        for i in range (1,2): # for i in range (1,2): # real env
+                            self.driver.back()
+                        time.sleep(0.1)
+                        
+                        return True
             return False
             
             ### test code ###
@@ -241,15 +263,16 @@ class booker(object):
                 # btn_book.click()
             except NoSuchElementException:
                 self.driver.back()
+                time.sleep(0.1)
                 pass
 
             # Enter preset content
             startTime =self.driver.find_element(By.XPATH,'//*[@id="event-starttime"]')
             startTime.clear()
-            startTime.send_keys(self.stTime.strftime("%H:%M"))
+            startTime.send_keys(self.stTime_fm.strftime("%H:%M"))
             endTime =self.driver.find_element(By.XPATH,'//*[@id="event-endtime"]') 
             endTime.clear()
-            self.driver.execute_script("arguments[0].value = '"+self.edTime.strftime("%H:%M")+"'", endTime)
+            self.driver.execute_script("arguments[0].value = '"+self.edTime+"'", endTime)
             # blank_area = self.driver.find_element(By.XPATH, '//*[@id="left-column"]/h1')
             endTime.click()
         
@@ -260,6 +283,7 @@ class booker(object):
                 print ('invalid room '+ str(self.roomNum))
                 for i in range (1,3):
                     self.driver.back()
+                time.sleep(0.1)
                 return False
             else:
                 print ('available room '+ str(self.roomNum))
@@ -268,6 +292,7 @@ class booker(object):
                 # book_status.click()
                 for i in range (1,2): # for i in range (1,2): # real env
                     self.driver.back()
+                time.sleep(0.1)
                 return True
     
     def extension_time(self):
@@ -277,7 +302,7 @@ class booker(object):
 
         now = datetime.datetime.now()
         now_form = datetime.datetime.strptime(now.strftime("%H:%M"),"%H:%M") # only hour:minute
-        delta =self.date-self.today # differenz between desired day and today
+        # delta =self.date-localtime.day # differenz between desired day and today
 
         # go to the page of booked room
         print ("go to the page of booked room")
@@ -286,15 +311,15 @@ class booker(object):
         btn_booked = self.driver.find_element(By.XPATH,'//div[@id="function-span"]/h1[2]/following-sibling::node()\
 [position()<count(//div[@id="function-span"]/h1[2]/following-sibling::node())\
 -count(//div[@id="function-span"]/h1[3]/following-sibling::node())]\
-//p[contains(text(),\''+self.stTime.strftime("%H:%M")+'\')]/../..//span[@class="event-link"]')
+//p[contains(text(),\''+self.stTime+'\')]/../..//span[@class="event-link"]')
         btn_booked.click()
 
-        # if date isn't todey+7
-        if self.date!=self.today+7: 
+        # if date isn't todey+7 or end time < current time
+        if self.date!=(localtime+datetime.timedelta(days=7)).day or time_cmp(localtime,self.edTime_fm)>0: 
             print ("fill endTime textBox")
             endTime =self.driver.find_element(By.XPATH,'//*[@id="event-endtime"]')    
             endTime.clear()
-            self.driver.execute_script("arguments[0].value = '"+self.edTime.strftime("%H:%M")+"'", endTime)
+            self.driver.execute_script("arguments[0].value = '"+self.edTime+"'", endTime)
             endTime.click()
 
             # check book status
@@ -302,19 +327,19 @@ class booker(object):
             book_status = self.driver.find_element(By.ID,'event-button-save')
             if book_status.is_enabled() == True:
                 book_status.click()
-                print ("Successfully extended the room time to "+self.edTime.strftime("%H:%M"))
+                print ("Successfully extended the room time to "+self.edTime)
                 return True
             else:
                 print ("Something wrong when extending room time, try next round")
                 return False
-        else: # date = today+7
+        else: # date = today+7, start time < current time < end time
             # get value of end time in textBox
             print ("get value of end time in textBox")
             endTime =self.driver.find_element(By.XPATH,'//*[@id="event-endtime"]')
             ed_ori = datetime.datetime.strptime(endTime.get_attribute("value"),"%H:%M")
             ed_value = ed_ori
             ed_tmp = getNearestMinFor(now.strftime("%H:%M"))
-            diff = diffMin( self.edTime, ed_ori)
+            diff = diffMin( self.edTime_fm, ed_ori)
             round = int(diff/15)
             print ("next time to book: "+ ed_tmp.strftime("%H:%M"))
             
@@ -355,14 +380,14 @@ class booker(object):
                         # Calculate the number of remaining bookings
                         print ("Calculate the number of remaining bookings")
                         ed_value = datetime.datetime.strptime(endTime.get_attribute("value"),"%H:%M")
-                        diff = diffMin(self.edTime, ed_value)
+                        diff = diffMin(self.edTime_fm, ed_value)
                         round = int(diff/15)
 
                         # BOOKING...
                         book_status.click()
 
                         # if the booking is completed
-                        if self.edTime.hour==ed_value.hour and self.edTime.minute==ed_value.minute:
+                        if self.edTime_fm.hour==ed_value.hour and self.edTime_fm.minute==ed_value.minute:
                             print ("[Finished]")
                             return True
 
@@ -390,14 +415,16 @@ if __name__ == '__main__':
     
     ## headless, no window
     options.add_argument('--headless')
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-dev-shm-usage')
     options.add_argument("--start-maximized")
-    options.add_argument("--window-size=1920,1080")
+    # options.add_argument("--window-size=1920,1080")
     intro = """Please choose mode:
     [1] Normal Mode
     [2] Extend your time"""
     # print (intro)
     # mode = int(input())
-    mode = 2
+    # mode = 2
     if mode==1:
         # print("Enter your desired start time(example: 18:15): ")
         # st = input() # start time
@@ -409,23 +436,26 @@ if __name__ == '__main__':
         # print ("Enter your wish date (if need, default value is today+7):")
         # tmp_dt = input()
         # date= tmp_dt if tmp_dt else 0 # input wish date if need
-        st ="17:30"
+        # st ="10:00"
+        st = start_time
         st_form = datetime.datetime.strptime(st, "%H:%M")
         st_aft30 = st_form+datetime.timedelta(minutes=30)
-        et ="20:30"
+        # et ="12:00"
+        et = end_time
         et_form = datetime.datetime.strptime(et, "%H:%M")
         ed_tmp = getNearestMinBack(localtime.strftime("%H:%M"))
-        num_room= 0 # str or 0(default)
-        date = 0 # str or 0(default)
+        # num_room= 0 # str or 0(default)
+        num_room = room_number
+        # date = 0 # str or 0(default)
         data = ['https://hfm-karlsruhe.asimut.net/public/login.php',  '13200',  'ZXY200238zxy.',options, st,et,num_room,date]
         roombooker = booker(data)
 
         # Error input
-        if (localtime.day+7)<int(date):
+        if (localtime+datetime.timedelta(days=7)).day<int(date):
             print ('Your input date is overrange, please try to enter again.')
 
         #  current time < (start time +30) and date = today+7
-        while time_cmp(localtime,st_aft30)<0 and ((localtime.day+7)==(int(date)) or date==0):
+        while time_cmp(localtime,st_aft30)<0 and ((localtime+datetime.timedelta(days=7)).day==(int(date)) or date==0):
             print ("[" + localtime.strftime("%H:%M:%S")+"]"+" waiting until reservation is possible")
             time.sleep(15)
             localtime = datetime.datetime.now() # refresh
@@ -486,11 +516,13 @@ if __name__ == '__main__':
         # print("Enter your desired end time:")    
         # et = input() # end time
 
-        date = 0
-        st ="17:30"
+        # date = 0
+        # st ="7:00"
+        st = start_time
         st_form = datetime.datetime.strptime(st, "%H:%M")
         # st_before = st_form-datetime.timedelta(minutes=30)
-        et ="20:30"
+        # et ="8:00"
+        et = end_time
         et_form = datetime.datetime.strptime(et, "%H:%M")
         num_room= 0
         
@@ -501,9 +533,5 @@ if __name__ == '__main__':
         roombooker.login()
         roombooker.extension_time()
 
-    
-
-    
-                
     # 退出浏览器
-    # roombooker.driver.quit()
+    roombooker.driver.quit()
