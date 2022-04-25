@@ -1,13 +1,13 @@
 ##### Google Colab #####
 #@title 步骤2：输入参数→点击运行
-mode = 2 #@param ["1", "2"] {type:"raw"}
-start_time = "7:00" #@param {type:"string"}
-end_time = "7:45" #@param {type:"string"}
+mode = 1 #@param ["1", "2"] {type:"raw"}
+start_time = "19:15" #@param {type:"string"}
+end_time = "22:00" #@param {type:"string"}
 room_number = 0 #@param {type:"integer"}
-date = 0 #@param {type:"integer"}
+date = "0" #@param {type:"string"}
 #################
 
-from xmlrpc.client import DateTime
+# from xmlrpc.client import DateTime
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver import ActionChains
@@ -16,6 +16,11 @@ from selenium.webdriver.chrome.options import Options
 import time
 import datetime
 from selenium.common.exceptions import NoSuchElementException
+import pytz
+
+utc=pytz.UTC
+timezone = pytz.timezone("Europe/Berlin")
+localtime = datetime.datetime.now(timezone)
 
 def time_cmp(first_time, second_time):
     return (int(first_time.strftime("%H%M%S")) - int(second_time.strftime("%H%M%S")))
@@ -39,20 +44,17 @@ def diffMin(t1,t2):
 class booker(object):
     
     def __init__(self,data):
-        # localtime = time.localtime(time.time())
-        # self.today = localtime.tm_mday
-        localtime = datetime.datetime.now()
-
         self.url = data[0]
         self.acc = data[1]
         self.psw = data[2]
         self.opt = data[3]
         self.stTime = data[4]
-        self.stTime_fm = datetime.datetime.strptime(data[4], "%H:%M") # formed start time
+        self.stTime_fm = datetime.datetime.strptime(data[4], "%H:%M") # format start time
         self.edTime = data[5]
-        self.edTime_fm = datetime.datetime.strptime(data[5], "%H:%M") # formed end time
+        self.edTime_fm = datetime.datetime.strptime(data[5], "%H:%M") # format end time
         self.roomNum = data[6]
-        self.date = int(data[7]) if data[7]!=0 else (localtime+datetime.timedelta(days=7)).day
+        self.date = data[7] if data[7]!='0' else (localtime+datetime.timedelta(days=7))
+        self.date_fm = datetime.datetime.strptime(data[7],'%d.%m.%Y').replace(tzinfo=utc)
         self.resRoomNum = '0'
         
         
@@ -79,7 +81,7 @@ class booker(object):
         
     def find_Termin_EG(self):
         print ("[find Termin in EG]")
-        delta_date = (localtime+datetime.timedelta(days=7)).day - self.date
+        delta_date = (localtime+datetime.timedelta(days=7)-self.date_fm).days
         counter_room = 0
         # invalid_room = [75]
         invalid_room = [75]
@@ -96,6 +98,7 @@ class booker(object):
                     btn_book = self.driver.find_element(By.XPATH,'//*[@id="function-span"]/p['+str(8-delta_date)+']/a').click()
                     # btn_book.click()
                 except NoSuchElementException:
+                    print ('error: NoSuchElementException')
                     self.driver.back()
                     time.sleep(0.1)
                     continue    
@@ -103,10 +106,13 @@ class booker(object):
                 # Enter preset content
                 startTime =self.driver.find_element(By.XPATH,'//*[@id="event-starttime"]')
                 startTime.clear()
-                startTime.send_keys(self.stTime_fm.strftime("%H:%M"))
+                startTime.send_keys(self.stTime)
                 endTime =self.driver.find_element(By.XPATH,'//*[@id="event-endtime"]')
                 endTime.clear()
-                self.driver.execute_script("arguments[0].value = '"+self.edTime+"'", endTime)
+                # print (self.edTime)
+                # endTime.send_keys(self.edTime)
+                
+                self.driver.execute_script("arguments[0].value = '"+ self.edTime +"'", endTime)
                 endTime.click()
                 # roomNumber =self.driver.find_element(By.XPATH,'//*[@id="event-location"]')
                 # roomNumber.clear()
@@ -185,7 +191,7 @@ class booker(object):
 
     def find_Termin_OG(self):
         print ("[find Termin in OG]")
-        delta_date = (localtime+datetime.timedelta(days=7)).day - self.date 
+        delta_date = (localtime+datetime.timedelta(days=7)-self.date_fm).days
         counter_room = 0
         # invalid_room = [82,85,90,93,94]
         invalid_room = [82]
@@ -208,6 +214,7 @@ class booker(object):
                         btn_book = self.driver.find_element(By.XPATH,'//*[@id="function-span"]/p['+str(8-delta_date)+']/a').click()
                         # btn_book.click()
                     except NoSuchElementException:
+                        print ('error: NoSuchElementException')
                         self.driver.back()
                         time.sleep(0.1)
                         continue 
@@ -215,7 +222,7 @@ class booker(object):
                     # Enter preset content
                     startTime =self.driver.find_element(By.XPATH,'//*[@id="event-starttime"]')
                     startTime.clear()
-                    startTime.send_keys(self.stTime_fm.strftime("%H:%M"))
+                    startTime.send_keys(self.stTime)
                     endTime =self.driver.find_element(By.XPATH,'//*[@id="event-endtime"]')
                     # value = endTime.get_attribute("value") 
                     endTime.clear()
@@ -300,13 +307,17 @@ class booker(object):
         # btn_zeitplan = self.driver.find_element(By.XPATH,'//*[@id="my-activities"]')
         # btn_zeitplan.click()
 
-        now = datetime.datetime.now()
+        now = datetime.datetime.now(timezone)
         now_form = datetime.datetime.strptime(now.strftime("%H:%M"),"%H:%M") # only hour:minute
         # delta =self.date-localtime.day # differenz between desired day and today
 
         # go to the page of booked room
         print ("go to the page of booked room")
-        btn_date = self.driver.find_element(By.XPATH,'//a[@class="ui-state-default" and text()="'+str(self.date)+'"]')
+        # if the day to book in next month, need to click button
+        if localtime.month!=self.date_fm.month: 
+            print ('the day to book in next month, need to click button')
+            self.driver.find_element(By.XPATH,'//*[@id="navigation-calendar"]/div/div/a[2]/span').click()
+        btn_date = self.driver.find_element(By.XPATH,'//a[@class="ui-state-default" and text()="'+str(self.date_fm.day)+'"]')
         btn_date.click()
         btn_booked = self.driver.find_element(By.XPATH,'//div[@id="function-span"]/h1[2]/following-sibling::node()\
 [position()<count(//div[@id="function-span"]/h1[2]/following-sibling::node())\
@@ -315,7 +326,7 @@ class booker(object):
         btn_booked.click()
 
         # if date isn't todey+7 or end time < current time
-        if self.date!=(localtime+datetime.timedelta(days=7)).day or time_cmp(localtime,self.edTime_fm)>0: 
+        if self.date_fm.day!=(localtime+datetime.timedelta(days=7)).day or time_cmp(localtime,self.edTime_fm)>0: 
             print ("fill endTime textBox")
             endTime =self.driver.find_element(By.XPATH,'//*[@id="event-endtime"]')    
             endTime.clear()
@@ -355,7 +366,7 @@ class booker(object):
                     # for m in range(1,2):
                         print ("[" + now.strftime("%H:%M:%S")+"] Waiting until the next time slot opens, "+ str(round)+" round left")
                         time.sleep(15)
-                        now = datetime.datetime.now()
+                        now = datetime.datetime.now(timezone)
 
                     # fill endTime textBox    
                     print ("fill endTime textBox")
@@ -373,7 +384,7 @@ class booker(object):
 
                         # refresh the time and end time (temporary)
                         print ("refresh the time and end time (temporary)")
-                        now = datetime.datetime.now()
+                        now = datetime.datetime.now(timezone)
                         now_form = datetime.datetime.strptime(now.strftime("%H:%M"),"%H:%M") # only hour:minute
                         ed_tmp = getNearestMinFor(now.strftime("%H:%M"))
                         
@@ -397,7 +408,7 @@ class booker(object):
                         print ("next time to book: "+ ed_tmp.strftime("%H:%M"))
                     else:
                         print ("Something wrong when extending room time, try next round")
-                        now = datetime.datetime.now()
+                        now = datetime.datetime.now(timezone)
                         now_form = datetime.datetime.strptime(now.strftime("%H:%M"),"%H:%M") # only hour:minute
                         # return False
                 else:
@@ -410,13 +421,14 @@ if __name__ == '__main__':
     options.add_argument('--ignore-ssl-errors')
     options.add_experimental_option("excludeSwitches", ['enable-automation', 'enable-logging'])
 
-    localtime = datetime.datetime.now()
-
-    
+    # localtime = datetime.datetime.now(timezone)
+    localPlus = localtime+datetime.timedelta(days=7)
+    lct_str= str(localtime.day)+'.'+str(localtime.month)+'.'+str(localtime.year)
+    localtime_fm=datetime.datetime.strptime(lct_str,'%d.%m.%Y')
     ## headless, no window
-    options.add_argument('--headless')
-    options.add_argument('--no-sandbox')
-    options.add_argument('--disable-dev-shm-usage')
+    # options.add_argument('--headless')
+    # options.add_argument('--no-sandbox')
+    # options.add_argument('--disable-dev-shm-usage')
     options.add_argument("--start-maximized")
     # options.add_argument("--window-size=1920,1080")
     intro = """Please choose mode:
@@ -436,29 +448,33 @@ if __name__ == '__main__':
         # print ("Enter your wish date (if need, default value is today+7):")
         # tmp_dt = input()
         # date= tmp_dt if tmp_dt else 0 # input wish date if need
-        # st ="10:00"
+
+        # Input
         st = start_time
+        et = end_time
+        num_room = room_number
+        date=date+'.'+str(localtime.year) if int(date)!=0 else str(localPlus.day)+'.'+str(localPlus.month)+'.'+str(localPlus.year)
+        # format time
         st_form = datetime.datetime.strptime(st, "%H:%M")
         st_aft30 = st_form+datetime.timedelta(minutes=30)
-        # et ="12:00"
-        et = end_time
         et_form = datetime.datetime.strptime(et, "%H:%M")
         ed_tmp = getNearestMinBack(localtime.strftime("%H:%M"))
-        # num_room= 0 # str or 0(default)
-        num_room = room_number
-        # date = 0 # str or 0(default)
+        date_form = datetime.datetime.strptime(date,'%d.%m.%Y')
+
+        # Pass parameters to the booker class
         data = ['https://hfm-karlsruhe.asimut.net/public/login.php',  '13200',  'ZXY200238zxy.',options, st,et,num_room,date]
         roombooker = booker(data)
 
         # Error input
-        if (localtime+datetime.timedelta(days=7)).day<int(date):
+        if date_form>(localtime_fm+datetime.timedelta(days=7)) or date_form<localtime_fm :
             print ('Your input date is overrange, please try to enter again.')
+            exit()
 
         #  current time < (start time +30) and date = today+7
-        while time_cmp(localtime,st_aft30)<0 and ((localtime+datetime.timedelta(days=7)).day==(int(date)) or date==0):
+        while time_cmp(localtime,st_aft30)<0 and date_form==(localtime_fm+datetime.timedelta(days=7)):
             print ("[" + localtime.strftime("%H:%M:%S")+"]"+" waiting until reservation is possible")
             time.sleep(15)
-            localtime = datetime.datetime.now() # refresh
+            localtime = datetime.datetime.now(timezone) # refresh
 
         roombooker.login()
 
@@ -466,12 +482,13 @@ if __name__ == '__main__':
         if time_cmp(localtime,et_form)>0:
             print ("Situtation: current time > end time")
             if num_room==0:
-                result = roombooker.find_Termin_EG() or roombooker.find_Termin_OG()
+                # result = roombooker.find_Termin_EG() or roombooker.find_Termin_OG()
+                result =  roombooker.find_Termin_OG()
             else:
                 result = roombooker.find_Termin_EG() if int(num_room) in range(101,116) else roombooker.find_Termin_OG() 
             if result:
                 print ("room booked in " + roombooker.resRoomNum + " from " + 
-                roombooker.stTime.strftime("%H:%M") + " to "+ roombooker.edTime.strftime("%H:%M"))
+                roombooker.stTime + " to "+ roombooker.edTime)
             else:
                 print ("Cannot find empty room at moment")
         #  (start time +30) < current time < end time
@@ -488,7 +505,7 @@ if __name__ == '__main__':
                         result = roombooker.find_Termin_EG() if int(num_room) in range(101,116) else roombooker.find_Termin_OG()
                     if result:
                         print ("room booked in " + roombooker.resRoomNum + " from " + 
-                        roombooker.stTime.strftime("%H:%M") + " to "+ roombooker.edTime.strftime("%H:%M"))
+                        roombooker.stTime + " to "+ roombooker.edTime)
                         roombooker.edTime = et_form
                         result_ex = roombooker.extension_time()
                         if result_ex: break
@@ -505,9 +522,9 @@ if __name__ == '__main__':
                         while (time_cmp(localtime,ed_tmp)<0):
                             print ("[" + localtime.strftime("%H:%M:%S")+"] Waiting for the next 15 minutes")
                             time.sleep(15)
-                            localtime = datetime.datetime.now()
+                            localtime = datetime.datetime.now(timezone)
     elif mode ==2:
-        # input: day(default:+7),start time(default:now), desired end time
+        # input: date(default:+7),start time(default:now), desired end time
         # print ("Enter your wish date (default: today+7):")
         # tmp_dt = input()
         # date= tmp_dt if tmp_dt else 0 # input wish date if need
@@ -516,17 +533,11 @@ if __name__ == '__main__':
         # print("Enter your desired end time:")    
         # et = input() # end time
 
-        # date = 0
-        # st ="7:00"
+        # Input
+        date=date+'.'+str(localtime.year) if int(date)!=0 else str(localPlus.day)+'.'+str(localPlus.month)+'.'+str(localPlus.year)
         st = start_time
-        st_form = datetime.datetime.strptime(st, "%H:%M")
-        # st_before = st_form-datetime.timedelta(minutes=30)
-        # et ="8:00"
         et = end_time
-        et_form = datetime.datetime.strptime(et, "%H:%M")
-        num_room= 0
-        
-        # print ("still under working...")
+        num_room= room_number # default
         
         data = ['https://hfm-karlsruhe.asimut.net/public/login.php',  '13200',  'ZXY200238zxy.',options, st,et,num_room,date]
         roombooker = booker(data)

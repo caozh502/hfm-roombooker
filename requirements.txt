@@ -1,0 +1,4 @@
+###### Requirements without Version Specifiers ######
+selenium
+pytz
+###### Requirements with Version Specifiers ######
