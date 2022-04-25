@@ -5,7 +5,7 @@ This is a program for booking a practice room in HfM (Hochschule für Musik Karl
 ## Implementation
 Environment: automatic web operations using **selenium** + chromedriver
 ```python
-pip install selenium
+pip install -r requirements.txt
 ```  
 The program has 2 modes:
 ### 1. Normal Mode  
