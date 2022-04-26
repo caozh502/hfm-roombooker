@@ -1,8 +1,10 @@
+# TODO: add telegram bot to push info 
+
 ##### Google Colab #####
 #@title 步骤2：输入参数→点击运行
 mode = 1 #@param ["1", "2"] {type:"raw"}
-start_time = "19:15" #@param {type:"string"}
-end_time = "22:00" #@param {type:"string"}
+start_time = "18:15" #@param {type:"string"}
+end_time = "22:15" #@param {type:"string"}
 room_number = 0 #@param {type:"integer"}
 date = "0" #@param {type:"string"}
 #################
@@ -111,6 +113,7 @@ class booker(object):
                 endTime.clear()
                 # print (self.edTime)
                 # endTime.send_keys(self.edTime)
+                # time.sleep(15)
                 
                 self.driver.execute_script("arguments[0].value = '"+ self.edTime +"'", endTime)
                 endTime.click()
@@ -330,7 +333,7 @@ class booker(object):
             print ("fill endTime textBox")
             endTime =self.driver.find_element(By.XPATH,'//*[@id="event-endtime"]')    
             endTime.clear()
-            self.driver.execute_script("arguments[0].value = '"+self.edTime+"'", endTime)
+            self.driver.execute_script("arguments[0].value = '"+self.edTime_fm.strftime("%H:%M")+"'", endTime)
             endTime.click()
 
             # check book status
@@ -338,7 +341,7 @@ class booker(object):
             book_status = self.driver.find_element(By.ID,'event-button-save')
             if book_status.is_enabled() == True:
                 book_status.click()
-                print ("Successfully extended the room time to "+self.edTime)
+                print ("Successfully extended the room time to "+self.edTime_fm.strftime("%H:%M"))
                 return True
             else:
                 print ("Something wrong when extending room time, try next round")
@@ -426,9 +429,9 @@ if __name__ == '__main__':
     lct_str= str(localtime.day)+'.'+str(localtime.month)+'.'+str(localtime.year)
     localtime_fm=datetime.datetime.strptime(lct_str,'%d.%m.%Y')
     ## headless, no window
-    # options.add_argument('--headless')
-    # options.add_argument('--no-sandbox')
-    # options.add_argument('--disable-dev-shm-usage')
+    options.add_argument('--headless')
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-dev-shm-usage')
     options.add_argument("--start-maximized")
     # options.add_argument("--window-size=1920,1080")
     intro = """Please choose mode:
@@ -482,8 +485,8 @@ if __name__ == '__main__':
         if time_cmp(localtime,et_form)>0:
             print ("Situtation: current time > end time")
             if num_room==0:
-                # result = roombooker.find_Termin_EG() or roombooker.find_Termin_OG()
-                result =  roombooker.find_Termin_OG()
+                result = roombooker.find_Termin_EG() or roombooker.find_Termin_OG()
+                # result =  roombooker.find_Termin_OG()
             else:
                 result = roombooker.find_Termin_EG() if int(num_room) in range(101,116) else roombooker.find_Termin_OG() 
             if result:
@@ -497,8 +500,11 @@ if __name__ == '__main__':
                 print ("Situtation: (start time +30) < current time < end time")
                 while (True):
                     # Temporary use of the end time (because the real end time has not yet arrived,so cannot be used as a valid parameter for find_Termin)
-                    roombooker.edTime = ed_tmp
-                    print ("Searching avaliable room now...")
+                    roombooker.edTime = ed_tmp.strftime("%H:%M")
+                    roombooker.edTime_fm = ed_tmp
+                    
+                    # try once search
+                    print ("Searching avaliable room between "+ st_form.strftime("%H:%M")+" to "+ed_tmp.strftime("%H:%M")+" ...")
                     if num_room==0:
                         result = roombooker.find_Termin_EG() or roombooker.find_Termin_OG()
                     else:
@@ -506,16 +512,25 @@ if __name__ == '__main__':
                     if result:
                         print ("room booked in " + roombooker.resRoomNum + " from " + 
                         roombooker.stTime + " to "+ roombooker.edTime)
-                        roombooker.edTime = et_form
+                        roombooker.edTime = et
+                        roombooker.edTime_fm = et_form
                         result_ex = roombooker.extension_time()
                         if result_ex: break
                     else:
                         print ("Cannot find empty room at moment, try again in 15 min later...")
-                        # all times + 15 min
+                        # refresh time: all times + 15 min
                         st_form = st_form + datetime.timedelta(minutes=15)
-                        et_form = (et_form + datetime.timedelta(minutes=15)) if et_form.strftime("%H:%M")!="23:45" else "23:45"
+                        et_form = (et_form + datetime.timedelta(minutes=15)) if et_form.strftime("%H:%M")!="23:45" else datetime.datetime.strptime("23:45","%H:%M")
                         st_aft30 = st_form + datetime.timedelta(minutes=30)
-                        ed_tmp = ed_tmp + datetime.timedelta(minutes=15) if ed_tmp.strftime("%H:%M")!="23:45" else "23:45"
+                        ed_tmp = ed_tmp + datetime.timedelta(minutes=15) if ed_tmp.strftime("%H:%M")!="23:45" else datetime.datetime.strptime("23:45","%H:%M")
+                        st = st_form.strftime("%H:%M")
+                        et = et_form.strftime("%H:%M")
+
+                        # deliver the data in roombook Object
+                        roombooker.stTime = st
+                        roombooker.stTime_fm = st_form
+
+                        print ("refresh the start time and end time: "+ st_form.strftime("%H:%M")+" to "+et_form.strftime("%H:%M"))
                         if (time_cmp(et_form,st_form)<1600): # start time=23:30(2330xx), end time=23:45(2345xx)
                             print ("Cannot find any room today, please try in another day :(")
                             break
