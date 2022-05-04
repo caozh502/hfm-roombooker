@@ -3,8 +3,8 @@
 ##### Google Colab #####
 #@title 步骤2：输入参数→点击运行
 mode = 1 #@param ["1", "2"] {type:"raw"}
-start_time = "18:15" #@param {type:"string"}
-end_time = "22:15" #@param {type:"string"}
+start_time = "18:30" #@param {type:"string"}
+end_time = "21:30" #@param {type:"string"}
 room_number = 0 #@param {type:"integer"}
 date = "0" #@param {type:"string"}
 #################
@@ -19,6 +19,7 @@ import time
 import datetime
 from selenium.common.exceptions import NoSuchElementException
 import pytz
+import telebot
 
 utc=pytz.UTC
 timezone = pytz.timezone("Europe/Berlin")
@@ -113,7 +114,7 @@ class booker(object):
                 endTime.clear()
                 # print (self.edTime)
                 # endTime.send_keys(self.edTime)
-                # time.sleep(15)
+                # time.sleep(13)
                 
                 self.driver.execute_script("arguments[0].value = '"+ self.edTime +"'", endTime)
                 endTime.click()
@@ -368,7 +369,7 @@ class booker(object):
                     while (time_cmp(now,ed_tmp)<0):
                     # for m in range(1,2):
                         print ("[" + now.strftime("%H:%M:%S")+"] Waiting until the next time slot opens, "+ str(round)+" round left")
-                        time.sleep(15)
+                        time.sleep(13)
                         now = datetime.datetime.now(timezone)
 
                     # fill endTime textBox    
@@ -424,7 +425,6 @@ if __name__ == '__main__':
     options.add_argument('--ignore-ssl-errors')
     options.add_experimental_option("excludeSwitches", ['enable-automation', 'enable-logging'])
 
-    # localtime = datetime.datetime.now(timezone)
     localPlus = localtime+datetime.timedelta(days=7)
     lct_str= str(localtime.day)+'.'+str(localtime.month)+'.'+str(localtime.year)
     localtime_fm=datetime.datetime.strptime(lct_str,'%d.%m.%Y')
@@ -434,12 +434,16 @@ if __name__ == '__main__':
     options.add_argument('--disable-dev-shm-usage')
     options.add_argument("--start-maximized")
     # options.add_argument("--window-size=1920,1080")
+
+    bot = telebot.bot()
+
     intro = """Please choose mode:
     [1] Normal Mode
     [2] Extend your time"""
     # print (intro)
     # mode = int(input())
     # mode = 2
+
     if mode==1:
         # print("Enter your desired start time(example: 18:15): ")
         # st = input() # start time
@@ -461,7 +465,7 @@ if __name__ == '__main__':
         st_form = datetime.datetime.strptime(st, "%H:%M")
         st_aft30 = st_form+datetime.timedelta(minutes=30)
         et_form = datetime.datetime.strptime(et, "%H:%M")
-        ed_tmp = getNearestMinBack(localtime.strftime("%H:%M"))
+        ed_tmp = getNearestMinFor(localtime.strftime("%H:%M"))
         date_form = datetime.datetime.strptime(date,'%d.%m.%Y')
 
         # Pass parameters to the booker class
@@ -474,50 +478,53 @@ if __name__ == '__main__':
             exit()
 
         #  current time < (start time +30) and date = today+7
+        s = 1
         while time_cmp(localtime,st_aft30)<0 and date_form==(localtime_fm+datetime.timedelta(days=7)):
+            if (s==True):
+                bot.sendMsg("[Situtation] current time < (start time +30)")
+                bot.sendMsg("[" + localtime.strftime("%H:%M:%S")+"]"+" waiting until reservation is possible")
+                s = 0
             print ("[" + localtime.strftime("%H:%M:%S")+"]"+" waiting until reservation is possible")
-            time.sleep(15)
+            time.sleep(13)
             localtime = datetime.datetime.now(timezone) # refresh
 
         roombooker.login()
 
         # current time > end time
         if time_cmp(localtime,et_form)>0:
-            print ("Situtation: current time > end time")
+            bot.sendMsg("[Situtation] current time > end time")
             if num_room==0:
                 result = roombooker.find_Termin_EG() or roombooker.find_Termin_OG()
                 # result =  roombooker.find_Termin_OG()
             else:
                 result = roombooker.find_Termin_EG() if int(num_room) in range(101,116) else roombooker.find_Termin_OG() 
             if result:
-                print ("room booked in " + roombooker.resRoomNum + " from " + 
-                roombooker.stTime + " to "+ roombooker.edTime)
+                bot.sendMsg("room booked in " + roombooker.resRoomNum + " from " + roombooker.stTime + " to "+ roombooker.edTime)
             else:
-                print ("Cannot find empty room at moment")
+                bot.sendMsg("Cannot find empty room at moment")
         #  (start time +30) < current time < end time
         else:
             if time_cmp(localtime,et_form)<0 and time_cmp(localtime,st_aft30)>0:
-                print ("Situtation: (start time +30) < current time < end time")
+                bot.sendMsg("[Situtation] (start time +30) < current time < end time")
                 while (True):
                     # Temporary use of the end time (because the real end time has not yet arrived,so cannot be used as a valid parameter for find_Termin)
                     roombooker.edTime = ed_tmp.strftime("%H:%M")
                     roombooker.edTime_fm = ed_tmp
                     
                     # try once search
-                    print ("Searching avaliable room between "+ st_form.strftime("%H:%M")+" to "+ed_tmp.strftime("%H:%M")+" ...")
+                    bot.sendMsg("[Searching] between "+ st_form.strftime("%H:%M")+" to "+ed_tmp.strftime("%H:%M")+" ...")
                     if num_room==0:
                         result = roombooker.find_Termin_EG() or roombooker.find_Termin_OG()
                     else:
                         result = roombooker.find_Termin_EG() if int(num_room) in range(101,116) else roombooker.find_Termin_OG()
                     if result:
-                        print ("room booked in " + roombooker.resRoomNum + " from " + 
-                        roombooker.stTime + " to "+ roombooker.edTime)
+                        bot.sendMsg("room booked in " + roombooker.resRoomNum + " from " + roombooker.stTime + " to "+ roombooker.edTime)
                         roombooker.edTime = et
                         roombooker.edTime_fm = et_form
                         result_ex = roombooker.extension_time()
                         if result_ex: break
                     else:
-                        print ("Cannot find empty room at moment, try again in 15 min later...")
+                        bot.sendMsg("[" + localtime.strftime("%H:%M:%S")+"]"+" Cannot find empty room at moment, try again in 15 min later...")
                         # refresh time: all times + 15 min
                         st_form = st_form + datetime.timedelta(minutes=15)
                         et_form = (et_form + datetime.timedelta(minutes=15)) if et_form.strftime("%H:%M")!="23:45" else datetime.datetime.strptime("23:45","%H:%M")
@@ -532,12 +539,13 @@ if __name__ == '__main__':
 
                         print ("refresh the start time and end time: "+ st_form.strftime("%H:%M")+" to "+et_form.strftime("%H:%M"))
                         if (time_cmp(et_form,st_form)<1600): # start time=23:30(2330xx), end time=23:45(2345xx)
-                            print ("Cannot find any room today, please try in another day :(")
+                            bot.sendMsg("Cannot find any room today, please try in another day :(")
                             break
+                        localtime = datetime.datetime.now(timezone)
                         while (time_cmp(localtime,ed_tmp)<0):
-                            print ("[" + localtime.strftime("%H:%M:%S")+"] Waiting for the next 15 minutes")
-                            time.sleep(15)
-                            localtime = datetime.datetime.now(timezone)
+                            print ("[" + localtime.strftime("%H:%M:%S")+"]"+" Waiting for the next 15 minutes")
+                            time.sleep(13)
+                            localtime = datetime.datetime.now(timezone) # refresh
     elif mode ==2:
         # input: date(default:+7),start time(default:now), desired end time
         # print ("Enter your wish date (default: today+7):")
@@ -549,7 +557,7 @@ if __name__ == '__main__':
         # et = input() # end time
 
         # Input
-        date=date+'.'+str(localtime.year) if int(date)!=0 else str(localPlus.day)+'.'+str(localPlus.month)+'.'+str(localPlus.year)
+        date=date+'.'+str(localtime.year) if date!='0' else str(localPlus.day)+'.'+str(localPlus.month)+'.'+str(localPlus.year)
         st = start_time
         et = end_time
         num_room= room_number # default
