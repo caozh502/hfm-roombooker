@@ -1,4 +1,5 @@
 ###### Requirements without Version Specifiers ######
 selenium
 pytz
+python-telegram-bot
 ###### Requirements with Version Specifiers ######
