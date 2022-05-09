@@ -1,10 +1,8 @@
-# TODO: add telegram bot to push info 
-
 ##### Google Colab #####
 #@title 步骤2：输入参数→点击运行
 mode = 1 #@param ["1", "2"] {type:"raw"}
-start_time = "18:30" #@param {type:"string"}
-end_time = "21:30" #@param {type:"string"}
+start_time = "17:15" #@param {type:"string"}
+end_time = "20:15" #@param {type:"string"}
 room_number = 0 #@param {type:"integer"}
 date = "0" #@param {type:"string"}
 #################
@@ -59,7 +57,7 @@ class booker(object):
         self.date = data[7] if data[7]!='0' else (localtime+datetime.timedelta(days=7))
         self.date_fm = datetime.datetime.strptime(data[7],'%d.%m.%Y').replace(tzinfo=utc)
         self.resRoomNum = '0'
-        
+        self.bot = telebot.bot()
         
 
     def login(self):   
@@ -317,10 +315,12 @@ class booker(object):
 
         # go to the page of booked room
         print ("go to the page of booked room")
+
         # if the day to book in next month, need to click button
         if localtime.month!=self.date_fm.month: 
             print ('the day to book in next month, need to click button')
             self.driver.find_element(By.XPATH,'//*[@id="navigation-calendar"]/div/div/a[2]/span').click()
+
         btn_date = self.driver.find_element(By.XPATH,'//a[@class="ui-state-default" and text()="'+str(self.date_fm.day)+'"]')
         btn_date.click()
         btn_booked = self.driver.find_element(By.XPATH,'//div[@id="function-span"]/h1[2]/following-sibling::node()\
@@ -342,10 +342,12 @@ class booker(object):
             book_status = self.driver.find_element(By.ID,'event-button-save')
             if book_status.is_enabled() == True:
                 book_status.click()
-                print ("Successfully extended the room time to "+self.edTime_fm.strftime("%H:%M"))
+                self.bot.sendMsg("Successfully extended the room time to "+self.edTime_fm.strftime("%H:%M"))
+                # print ("Successfully extended the room time to "+self.edTime_fm.strftime("%H:%M"))
                 return True
             else:
-                print ("Something wrong when extending room time, try next round")
+                self.bot.sendMsg("Something wrong when extending room time, try next round")
+                #  print ("Something wrong when extending room time, try next round")
                 return False
         else: # date = today+7, start time < current time < end time
             # get value of end time in textBox
@@ -364,10 +366,9 @@ class booker(object):
 
                     # if now>>value of endtime TextBox (over 15min) then book once, else waiting
                     if  diffMin(now_form,ed_value)>=15:
-                        print ("now>>value of endtime TextBox (over 15min) then book once")
+                        print ("now >> value of endtime TextBox (over 15min) ---> book once")
                         ed_tmp = getNearestMinBack(now.strftime("%H:%M"))
                     while (time_cmp(now,ed_tmp)<0):
-                    # for m in range(1,2):
                         print ("[" + now.strftime("%H:%M:%S")+"] Waiting until the next time slot opens, "+ str(round)+" round left")
                         time.sleep(13)
                         now = datetime.datetime.now(timezone)
@@ -384,7 +385,7 @@ class booker(object):
                     time.sleep(0.5)
                     book_status = self.driver.find_element(By.ID,'event-button-save')
                     if book_status.is_enabled() == True:
-                        print ("Successfully extended the room time to "+ed_tmp.strftime("%H:%M"))
+                        self.bot.sendMsg("Successfully extended the room time to "+ed_tmp.strftime("%H:%M")+" ,"+ str(round-1)+" round left")
 
                         # refresh the time and end time (temporary)
                         print ("refresh the time and end time (temporary)")
@@ -403,7 +404,8 @@ class booker(object):
 
                         # if the booking is completed
                         if self.edTime_fm.hour==ed_value.hour and self.edTime_fm.minute==ed_value.minute:
-                            print ("[Finished]")
+                            self.bot.sendMsg("[Finished]")
+                            # print ("[Finished]")
                             return True
 
                         # go back to the booking page
@@ -411,7 +413,7 @@ class booker(object):
                         self.driver.back()
                         print ("next time to book: "+ ed_tmp.strftime("%H:%M"))
                     else:
-                        print ("Something wrong when extending room time, try next round")
+                        self.bot.sendMsg("Something wrong when extending room time, try next round")
                         now = datetime.datetime.now(timezone)
                         now_form = datetime.datetime.strptime(now.strftime("%H:%M"),"%H:%M") # only hour:minute
                         # return False
@@ -465,7 +467,7 @@ if __name__ == '__main__':
         st_form = datetime.datetime.strptime(st, "%H:%M")
         st_aft30 = st_form+datetime.timedelta(minutes=30)
         et_form = datetime.datetime.strptime(et, "%H:%M")
-        ed_tmp = getNearestMinFor(localtime.strftime("%H:%M"))
+        ed_tmp = getNearestMinBack(localtime.strftime("%H:%M"))
         date_form = datetime.datetime.strptime(date,'%d.%m.%Y')
 
         # Pass parameters to the booker class
@@ -486,7 +488,10 @@ if __name__ == '__main__':
                 s = 0
             print ("[" + localtime.strftime("%H:%M:%S")+"]"+" waiting until reservation is possible")
             time.sleep(13)
-            localtime = datetime.datetime.now(timezone) # refresh
+            
+            # refresh
+            localtime = datetime.datetime.now(timezone) 
+            ed_tmp = getNearestMinBack(localtime.strftime("%H:%M"))
 
         roombooker.login()
 
