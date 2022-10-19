@@ -7,13 +7,14 @@ from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
 import telebot
 import pytz
+import numpy as np
 
 utc=pytz.UTC
 timezone = pytz.timezone("Europe/Berlin")
 localtime = datetime.datetime.now(timezone)
 
-invalid_room_EG = [114] # EG: [65-79]
-invalid_room_OG = [203] # OG: [80-94]
+invalid_room_EG = np.array([114]) # EG: [65-79]
+invalid_room_OG = np.array([203]) # OG: [80-94]
 
 def time_cmp(first_time, second_time):
     return (int(first_time.strftime("%H%M%S")) - int(second_time.strftime("%H%M%S")))
@@ -355,7 +356,7 @@ class booker(object):
 
                     # if now>>value of endtime TextBox (over 15min) then book once, else waiting
                     if  diffMin(now_form,ed_value)>=15:
-                        print ("now >> value of endtime TextBox (over 15min) ---> book once")
+                        print ("now >> endtime in TextBox (over 15min) ---> book once")
                         ed_tmp = getNearestMinBack(now.strftime("%H:%M"))
                     while (time_cmp(now,ed_tmp)<0):
                         print ("[" + now.strftime("%H:%M:%S")+"] Waiting until the next time slot opens, "+ str(round)+" round left")
