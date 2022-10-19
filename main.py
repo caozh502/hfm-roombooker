@@ -1,8 +1,8 @@
 ##### Google Colab #####
 #@title 步骤2：输入参数→点击运行
-mode = 2 #@param ["1", "2"] {type:"raw"}
-start_time = "20:30" #@param {type:"string"}
-end_time = "22:30" #@param {type:"string"}
+mode = 1 #@param ["1", "2"] {type:"raw"}
+start_time = "22:45" #@param {type:"string"}
+end_time = "23:30" #@param {type:"string"}
 room_number = 0 #@param {type:"integer"}
 date = "0" #@param {type:"string"}
 #################
@@ -28,9 +28,10 @@ localtime = datetime.datetime.now(timezone)
 def mode_1(roombooker, bot, st, et):
     while True:
         try:
-            st_aft30 = st_form+datetime.timedelta(minutes=30)
+            
             st_form = datetime.datetime.strptime(st, "%H:%M")
             et_form = datetime.datetime.strptime(et, "%H:%M")
+            st_aft30 = st_form+datetime.timedelta(minutes=30)
             # refresh
             localtime = datetime.datetime.now(timezone) 
             ed_tmp = getNearestMinBack(localtime.strftime("%H:%M"))

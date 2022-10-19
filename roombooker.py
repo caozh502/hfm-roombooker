@@ -333,11 +333,9 @@ class booker(object):
             if book_status.is_enabled() == True:
                 book_status.click()
                 self.bot.sendMsg("Successfully extended the room time to "+self.edTime_fm.strftime("%H:%M"))
-                # print ("Successfully extended the room time to "+self.edTime_fm.strftime("%H:%M"))
                 return True
             else:
                 self.bot.sendMsg("Something wrong when extending room time, try next round")
-                #  print ("Something wrong when extending room time, try next round")
                 return False
         else: # date = today+7, start time < current time < end time
             # get value of end time in textBox
@@ -375,7 +373,16 @@ class booker(object):
                     time.sleep(0.5)
                     book_status = self.driver.find_element(By.ID,'event-button-save')
                     if book_status.is_enabled() == True:
-                        self.bot.sendMsg("Successfully extended the room time to "+ed_tmp.strftime("%H:%M")+", "+ str(round-1)+" round left")
+                        # BOOKING...
+                        book_status.click()
+                        round = round - 1
+                        self.bot.sendMsg("Successfully extended the room time to "+ed_tmp.strftime("%H:%M")+", "+ str(round)+" round left")
+                        
+                        # the booking is completed
+                        # if self.edTime_fm.hour==ed_value.hour and self.edTime_fm.minute==ed_value.minute:
+                        if round == 0:
+                            self.bot.sendMsg("[Finished]")
+                            return True
 
                         # refresh the time and end time (temporary)
                         print ("refresh the time and end time (temporary)")
@@ -384,20 +391,11 @@ class booker(object):
                         ed_tmp = getNearestMinFor(now.strftime("%H:%M"))
                         
                         # Calculate the number of remaining bookings
-                        print ("Calculate the number of remaining bookings")
-                        ed_value = datetime.datetime.strptime(endTime.get_attribute("value"),"%H:%M")
-                        diff = diffMin(self.edTime_fm, ed_value)
-                        round = int(diff/15)
-
-                        # BOOKING...
-                        book_status.click()
-
-                        # if the booking is completed
-                        if self.edTime_fm.hour==ed_value.hour and self.edTime_fm.minute==ed_value.minute:
-                            self.bot.sendMsg("[Finished]")
-                            # print ("[Finished]")
-                            return True
-
+                        # print ("Calculate the number of remaining bookings")
+                        # ed_value = datetime.datetime.strptime(endTime.get_attribute("value"),"%H:%M")
+                        # diff = diffMin(self.edTime_fm, ed_value)
+                        # round = int(diff/15)
+                        
                         # go back to the booking page
                         time.sleep(1)
                         self.driver.back()
