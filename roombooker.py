@@ -392,7 +392,7 @@ class booker(object):
                         
                         # Calculate the number of remaining bookings
                         # print ("Calculate the number of remaining bookings")
-                        # ed_value = datetime.datetime.strptime(endTime.get_attribute("value"),"%H:%M")
+                        ed_value = datetime.datetime.strptime(endTime.get_attribute("value"),"%H:%M")
                         # diff = diffMin(self.edTime_fm, ed_value)
                         # round = int(diff/15)
                         
