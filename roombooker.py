@@ -8,6 +8,8 @@ from selenium.common.exceptions import NoSuchElementException
 import telebot
 import pytz
 import numpy as np
+from selenium.webdriver.chrome.service import Service as ChromeService
+from webdriver_manager.chrome import ChromeDriverManager
 
 utc=pytz.UTC
 timezone = pytz.timezone("Europe/Berlin")
@@ -57,7 +59,7 @@ class booker(object):
     def login(self):   
         print ("[Login]")
         # set chromedriver
-        self.driver=webdriver.Chrome(options=self.opt)
+        self.driver=webdriver.Chrome(options=self.opt, service=ChromeService(ChromeDriverManager().install()))
         self.driver.maximize_window()  #设置窗口最大化
         self.driver.implicitly_wait(1) #设置等待1秒后打开目标网页
 
