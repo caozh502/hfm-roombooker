@@ -1,8 +1,8 @@
 ##### Google Colab #####
 #@title 步骤2：输入参数→点击运行
-mode = 1 #@param ["1", "2"] {type:"raw"}
-start_time = "22:45" #@param {type:"string"}
-end_time = "23:30" #@param {type:"string"}
+mode = 2 #@param ["1", "2"] {type:"raw"}
+start_time = "17:30" #@param {type:"string"}
+end_time = "20:30" #@param {type:"string"}
 room_number = 0 #@param {type:"integer"}
 date = "0" #@param {type:"string"}
 #################
@@ -100,7 +100,7 @@ def mode_1(roombooker, bot, st, et):
                                 time.sleep(13)
                                 localtime = datetime.datetime.now(timezone) # refresh
             break
-        except (http.client.RemoteDisconnected, WebDriverException, ProtocolError, NetworkError) as e:
+        except (http.client.RemoteDisconnected, ProtocolError, NetworkError) as e:
                 time.sleep(5)
                 if roombooker.counter < 10:
                     print("Internet disconneted, retrying " + str(roombooker.counter+1) +" time")
@@ -108,6 +108,9 @@ def mode_1(roombooker, bot, st, et):
                 else:
                     print("[END] lost connect")
                     break
+        except (WebDriverException) as e:
+            print("Please update the chrome version")
+            break
 
 def mode_2(roombooker):
     while True:
@@ -115,7 +118,7 @@ def mode_2(roombooker):
             roombooker.login()
             roombooker.extension_time()
             break
-        except (http.client.RemoteDisconnected, WebDriverException, ProtocolError, NetworkError) as e:
+        except (http.client.RemoteDisconnected, ProtocolError, NetworkError) as e:
             time.sleep(5)
             if roombooker.counter < 10:
                 print("Internet disconneted, retrying " + str(roombooker.counter+1) +" time")
@@ -123,6 +126,9 @@ def mode_2(roombooker):
             else:
                 print("[END] lost connect")
                 break
+        # except (WebDriverException) as e:
+        #     print("Please update the chrome version")
+        #     break
         
 
 if __name__ == '__main__':
@@ -136,10 +142,10 @@ if __name__ == '__main__':
     lct_str= str(localtime.day)+'.'+str(localtime.month)+'.'+str(localtime.year)
     localtime_fm=datetime.datetime.strptime(lct_str,'%d.%m.%Y')
     ## headless, no window
-    options.add_argument('--headless')
+    # options.add_argument('--headless')
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
-    # options.add_argument("--start-maximized")
+    options.add_argument("--start-maximized")
     options.add_argument("--window-size=1920,1080")
 
     telebot = telebot.bot()
